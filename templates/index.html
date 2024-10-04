@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <img src="{{ url_for('video_feed') }}" id="video">
+    
+    <!-- Modal Popup -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <img id="captured_image" src="" alt="Captured Image">
+            <div class="modal-buttons">
+                <button id="cancel-button">Batal</button>
+                <button id="confirm-button">Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
