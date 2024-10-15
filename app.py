@@ -26,11 +26,14 @@ next_save_time = datetime.now()
 
 def save_detected_face(frame):
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    filename = f"ta-facerecognition/detected_faces/face_{timestamp}.jpg"
-    cv2.imwrite(filename, frame)
+    filename = f"face_{timestamp}.jpg"
+    image_path = os.path.join('detected_faces', filename)  # Simpan di dalam folder detected_faces
+    cv2.imwrite(image_path, frame)
+    
     global last_captured_image
-    last_captured_image = {'timestamp': timestamp, 'image_url': f'/show_image/face_{timestamp}.jpg'}
-    return filename
+    last_captured_image = {'timestamp': timestamp, 'image_url': f'/show_image/{filename}'}
+    
+    return image_path
 
 def detect_faces():
     cap = cv2.VideoCapture(0)
@@ -79,7 +82,13 @@ def video_feed():
 
 @app.route('/show_image/<filename>')
 def show_image(filename):
-    return send_file(f'detected_faces/{filename}', mimetype='image/jpeg')
+    file_path = os.path.join('detected_faces', filename)
+    
+    # Pastikan file ada sebelum mengirimkannya
+    if not os.path.exists(file_path):
+        return jsonify({'error': 'File not found'}), 404
+    
+    return send_file(file_path, mimetype='image/jpeg')
 
 @app.route('/last_captured_image')
 def get_last_captured_image():
@@ -95,29 +104,27 @@ def resume_capture():
 def recognize():
     try:
         # Ambil gambar dari permintaan
-        image_data = request.json['image']
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image part in the request'}), 400
 
-        # Dekode gambar base64
-        image = np.frombuffer(base64.b64decode(image_data.split(",")[1]), np.uint8)
+        file = request.files['image']
+
+        # Baca file gambar
+        image = np.frombuffer(file.read(), np.uint8)
         image = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
-        # Pastikan gambar tidak kosong
         if image is None or image.size == 0:
             return jsonify({'error': 'Invalid image data'}), 400
 
-        # Konversi gambar ke skala abu-abu
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        # Deteksi wajah
         faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
-        # Persiapkan respons
         response = {
             'faces_detected': len(faces),
             'faces': []
         }
 
-        # Untuk setiap wajah yang terdeteksi, tambahkan koordinatnya ke respons
         for (x, y, w, h) in faces:
             response['faces'].append({
                 'x': int(x),
