@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style2.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <h1>Face Recognition - Admin Dashboard</h1>
+        <a href="{{ url_for('admin_logout') }}">Logout</a>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            <img src="{{ url_for('static', filename='icons/my-logo.png') }}" alt="My Logo" class="logo-image">
+        </div>
+        <ul>
+            <li><a href="{{ url_for('admin_dashboard') }}" id="home-link"><img src="{{ url_for('static', filename='icons/home-icon.png') }}" class="icon"> Log Pegawai</a></li>
+            <li><a href="#" id="upload-link"><img src="{{ url_for('static', filename='icons/add-pegawai-icon.png') }}" class="icon"> Add Pegawai</a></li>
+            <li><a href="#" id="chart-link"><img src="{{ url_for('static', filename='icons/chart-icon.png') }}" class="icon"> Grafik Absensi</a></li>
+        </ul>
+    </div>
+
+    <!-- Content Sections (Tanpa Fitur Absen) -->
+    <div class="content" id="home-section">
+        <h2>Log Kehadiran Pegawai</h2>
+        <table id="log-absen-table" class="attendance-table">
+            <thead>
+                <tr>
+                    <th>Nama</th>
+                    <th>Tanggal Absen</th>
+                    <th>Waktu Masuk</th>
+                    <th>Waktu Keluar</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+
+    <div class="add-employee-container">
+        <div class="add-employee-content" id="add-employee-section">
+            <h2>Tambah Data Pegawai</h2>
+            <form id="add-employee-form" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="employee-name">Nama Pegawai:</label>
+                    <input type="text" id="employee-name" name="employee-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="employee-nip">NIP:</label>
+                    <input type="text" id="employee-nip" name="employee-nip" required>
+                </div>
+                <div class="form-group">
+                    <label for="employee-phone">Telepon:</label>
+                    <input type="text" id="employee-phone" name="employee-phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="employee-address">Alamat:</label>
+                    <input type="text" id="employee-address" name="employee-address" required>
+                </div>
+                <button type="submit" class="submit-btn">Tambah Pegawai</button>
+            </form>
+    
+            <div id="result-message"></div>
+        </div>
+    </div>
+    
+
+    <!-- Content Sections -->
+    <div class="content" id="chart-section" style="display:none;">
+        <h2>Grafik Absensi Pegawai</h2>
+        
+        <!-- Date Picker -->
+        <div class="date-picker-container">
+            <label for="date-range">Pilih Rentang Tanggal:</label>
+            <input type="text" id="date-range" placeholder="Pilih Rentang Tanggal" readonly>
+            <button id="filter-chart-btn">Tampilkan Grafik</button>
+        </div>
+    
+        <!-- Dropdown untuk Pegawai -->
+        <div class="employee-selector">
+            <label for="employee-select">Pilih Pegawai:</label>
+            <select id="employee-select">
+                <option value="">Semua Pegawai</option>
+            </select>
+            <button id="filter-employee-chart-btn">Tampilkan Grafik Pegawai</button>
+        </div>
+    
+        <!-- Grafik -->
+        <canvas id="attendanceChart" width="400" height="200"></canvas>
+        <canvas id="employeeChart" width="400" height="200" style="display:none;"></canvas>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script2.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <script>
+                // Navigation for sidebar
+                document.getElementById('home-link').addEventListener('click', function() {
+                    document.getElementById('home-section').style.display = 'block'; // Show home section
+                    document.getElementById('add-employee-section').style.display = 'none'; // Hide manage data section
+                });
+        
+                document.getElementById('upload-link').addEventListener('click', function() {
+                    document.getElementById('add-employee-section').style.display = 'block'; // Show manage data section
+                    document.getElementById('home-section').style.display = 'none'; // Hide home section
+                    fetchEmployeeData(); // Fetch employee data when manage data section is opened
+                });
+
+                document.getElementById('chart-link').addEventListener('click', function() {
+                    document.getElementById('chart-section').style.display = 'block'; // Show chart section
+                    document.getElementById('home-section').style.display = 'none'; // Hide home section
+                    document.getElementById('add-employee-section').style.display = 'none'; // Hide upload section
+                    fetchAttendanceChartData(); // Fetch and render chart data
+                });
+
+                // Fungsi untuk memperbarui tabel absensi dengan data yang didapatkan
+                function updateAttendanceTable(absensiData) {
+                    const tableBody = document.getElementById('log-absen-table').querySelector('tbody');
+                    tableBody.innerHTML = ''; // Bersihkan tabel sebelum menambahkan data baru
+                
+                    absensiData.forEach(absen => {
+                        const newRow = document.createElement('tr');
+                        newRow.innerHTML = `
+                            <td>${absen.pegawai ? absen.pegawai.name : 'Tidak Diketahui'}</td>
+                            <td>${absen.tanggal_absen}</td>
+                            <td>${absen.waktu_masuk || 'Belum Tercatat'}</td>
+                            <td>${absen.waktu_keluar || 'Belum Tercatat'}</td>
+                        `;
+                        tableBody.appendChild(newRow);
+                    });
+                }
+                
+                // Panggil fetchAttendanceLog saat halaman dimuat
+                window.addEventListener('DOMContentLoaded', function () {
+                    fetchAttendanceLog();
+                });
+
+                // Navigation for sidebar
+                document.getElementById('home-link').addEventListener('click', function() {
+                    window.location.href = '/';
+                });
+        
+                function fetchAttendanceLog() {
+                    fetch('http://localhost:8000/api/log-absen') // Ganti dengan URL API Anda
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                // Perbarui tabel absensi dengan data yang diambil
+                                updateAttendanceTable(data.data);
+                            } else {
+                                alert('Tidak ada data absensi');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching attendance log:', error);
+                        });
+                }
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                        {% for category, message in messages %}
+                            if ("{{ category }}" === "success") {
+                                alert("✅ {{ message }}");
+                            } else if ("{{ category }}" === "danger") {
+                                alert("❌ {{ message }}");
+                            }
+                        {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            // Fungsi untuk mengambil data grafik dari backend
+function fetchAttendanceChartData() {
+    fetch('http://localhost:8000/api/log-absen/chart') // Ganti dengan endpoint grafik absensi Anda
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                renderAttendanceChart(data.chartData);
+            } else {
+                alert('Tidak ada data grafik absensi.');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching attendance chart data:', error);
+        });
+}
+
+// Fungsi untuk merender grafik menggunakan Chart.js
+function renderAttendanceChart(chartData) {
+    const ctx = document.getElementById('attendanceChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartData.labels, // Contoh: ['01/01', '02/01', ...]
+            datasets: [
+                {
+                    label: 'Hadir',
+                    data: chartData.presentData, // Contoh: [10, 12, ...]
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                },
+                {
+                    label: 'Tidak Hadir',
+                    data: chartData.absentData, // Contoh: [5, 3, ...]
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { beginAtZero: true },
+                y: { beginAtZero: true },
+            },
+        },
+    });
+}
+
+    </script>
+
+
+</body>
+</html>

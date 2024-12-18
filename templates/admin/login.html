@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Background animasi gradient */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Arial', sans-serif;
+            background: #f8f9fa;
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Container card */
+        .login-container {
+            background: #2c3e50;
+            width: 100%;
+            max-width: 400px;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        /* Heading */
+        .login-container h2 {
+            margin-bottom: 20px;
+            font-size: 28px;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        /* Input field */
+        .login-container .input-container {
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .login-container input {
+            width: 82%;
+            padding: 10px;
+            border: 1px solid #2A3335;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .login-container input:focus {
+            outline: none;
+            border-color: #7f7fd5;
+            box-shadow: 0 0 10px rgba(127, 127, 213, 0.5);
+        }
+
+        /* Placeholder animasi */
+        .login-container input::placeholder {
+            color: transparent;
+        }
+
+        .login-container input:focus::placeholder {
+            color: #bbb;
+        }
+
+        .login-container label {
+            position: absolute;
+            left: 10%;
+            top: 10px;
+            font-size: 12px;
+            color: #7f7fd5;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .login-container input:focus + label,
+        .login-container input:not(:placeholder-shown) + label {
+            top: -10px;
+            font-size: 12px;
+            color: #7f7fd5;
+        }
+
+        /* Password toggle */
+        .password-toggle {
+            position: absolute;
+            right: 10%;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 18px;
+            color: #7f7fd5;
+        }
+
+        /* Tombol login */
+        .login-container button {
+            width: 87%;
+            padding: 12px;
+            background: linear-gradient(to right, #7f7fd5, #86a8e7, #91eae4);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .login-container button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(127, 127, 213, 0.5);
+        }
+
+        /* Link untuk forgot password */
+        .login-container .forgot-password {
+            display: block;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #555;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .login-container .forgot-password:hover {
+            color: #7f7fd5;
+        }
+
+        /* Notifikasi Floating */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #333;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateY(-30px);
+            animation: slideIn 0.5s forwards, fadeOut 5s 4.5s forwards;
+            z-index: 1000;
+        }
+
+        .notification.success { background: #2ecc71; }
+        .notification.error { background: #e74c3c; }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login Admin</h2>
+        <form method="POST">
+            <div class="input-container">
+                <input type="text" name="username" placeholder=" " required>
+                <label for="username">Username</label>
+            </div>
+            <div class="input-container">
+                <input type="password" id="password" name="password" placeholder=" " required>
+                <label for="password">Password</label>
+                <span class="password-toggle" id="toggle-password">
+                    <img src="{{ url_for('static', filename='icons/eye-icon.png') }}" alt="Toggle Visibility" width="20">
+                </span>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+        <a href="#" class="forgot-password">Forgot Password?</a>
+    </div>
+
+    <!-- Container untuk notifikasi -->
+    <div id="notification-container"></div>
+
+    <script>
+        // Notifikasi Floating
+        function showNotification(message, type) {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+
+            container.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 5500);
+        }
+
+        // Toggle password visibility
+        const togglePassword = document.getElementById('toggle-password');
+        const passwordInput = document.getElementById('password');
+
+        togglePassword.addEventListener('click', function () {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            this.querySelector('img').src = type === 'password' 
+                ? "{{ url_for('static', filename='icons/eye-icon.png') }}"
+                : "{{ url_for('static', filename='icons/eye-slash-icon.png') }}";
+        });
+
+                // Tampilkan notifikasi berdasarkan flash message
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                        {% for category, message in messages %}
+                            if ("{{ category }}" === "success") {
+                                alert("✅ {{ message }}");
+                            } else if ("{{ category }}" === "danger") {
+                                alert("❌ {{ message }}");
+                            }
+                        {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+    </script>
+</body>
+</html>

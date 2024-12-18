@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Face Recognition</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <h1>Admin - Face Recognition</h1>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            <img src="{{ url_for('static', filename='icons/my-logo.png') }}" alt="My Logo" class="logo-image">
+        </div>
+        <ul>
+            <li><a href="#" id="home-link"><img src="{{ url_for('static', filename='icons/home-icon.png') }}" class="icon"> Log Absen Karyawan</a></li>
+            <li><a href="#" id="absen-link"><img src="{{ url_for('static', filename='icons/absen-icon.png') }}" class="icon"> Absen</a></li>
+            <li><a href="#" id="upload-link"><img src="{{ url_for('static', filename='icons/upload-icon.png') }}" class="icon"> Upload Data</a></li>
+            <li><a href="#" id="manage-data-link"><img src="{{ url_for('static', filename='icons/manage-icon.png') }}" class="icon"> Manage Data</a></li>
+        </ul>
+    </div>
+
+    <!-- Home Section -->
+    <!-- Home Section with Attendance Log -->
+    <div class="content" id="home-section">
+        <h2>Log Kehadiran Pegawai</h2>
+        <table id="log-absen-table" class="attendance-table">
+            <thead>
+                <tr>
+                    <th>Nama</th>
+                    <th>Tanggal Absen</th>
+                    <th>Waktu Masuk</th>
+                    <th>Waktu Keluar</th>
+                </tr>
+            </thead>
+            <tbody>
+            
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Manage Data Section -->
+
+    <!-- Modal for Deleting Employee -->
+    <div id="deleteModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <p>Are you sure you want to delete this employee?</p>
+            <div class="modal-buttons">
+                <button id="cancel-delete-button">Cancel</button>
+                <button id="confirm-delete-button">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <script>
+        // Navigation for sidebar
+        document.getElementById('home-link').addEventListener('click', function() {
+            document.getElementById('home-section').style.display = 'block'; // Show home section
+            document.getElementById('manage-data-section').style.display = 'none'; // Hide manage data section
+        });
+
+        document.getElementById('manage-data-link').addEventListener('click', function() {
+            document.getElementById('manage-data-section').style.display = 'block'; // Show manage data section
+            document.getElementById('home-section').style.display = 'none'; // Hide home section
+            fetchEmployeeData(); // Fetch employee data when manage data section is opened
+        });
+
+        function fetchAttendanceLog() {
+            fetch('http://localhost:8000/api/log-absen') // Ganti dengan URL API Anda
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Perbarui tabel absensi dengan data yang diambil
+                        updateAttendanceTable(data.data);
+                    } else {
+                        alert('Tidak ada data absensi');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching attendance log:', error);
+                });
+        }
+
+        // Update Employee Table
+        function updateEmployeeTable(employees) {
+            const tableBody = document.getElementById('employee-data-table').querySelector('tbody');
+            tableBody.innerHTML = ''; // Clear existing rows
+            
+            employees.forEach(employee => {
+                const newRow = document.createElement('tr');
+                newRow.innerHTML = `
+                    <td>${employee.id}</td>
+                    <td>${employee.name}</td>
+                    <td><img src="${employee.photo}" alt="Foto" class="employee-photo"></td>
+                    <td><button onclick="deleteEmployee(${employee.id})">Delete</button></td>
+                `;
+                tableBody.appendChild(newRow);
+            });
+        }
+
+        // Show Delete Confirmation Modal
+        function deleteEmployee(employeeId) {
+            document.getElementById('deleteModal').style.display = 'block'; // Show modal
+            document.getElementById('confirm-delete-button').onclick = function() {
+                // Delete Employee
+                fetch(`http://localhost:8000/api/employees/${employeeId}`, { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Employee deleted successfully');
+                            fetchEmployeeData(); // Refresh employee data
+                        } else {
+                            alert('Failed to delete employee');
+                        }
+                        document.getElementById('deleteModal').style.display = 'none'; // Hide modal
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error deleting employee');
+                        document.getElementById('deleteModal').style.display = 'none'; // Hide modal
+                    });
+            };
+        }
+
+        // Cancel delete operation
+        document.getElementById('cancel-delete-button').addEventListener('click', function() {
+            document.getElementById('deleteModal').style.display = 'none'; // Hide modal
+        });
+    </script>
+</body>
+</html>
